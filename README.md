@@ -22,3 +22,20 @@ wget https://s3.amazonaws.com/google-landmark/metadata/train_attribution.csv
 cd ../scripts/
 python scrape_flickr.py
 ```
+
+
+##### If you discover any bugs in the code please contact me, I will cross-check them with my nightmares.
+
+## Citation
+
+We hope ACM is a strong method for comparison, and this idea/codebase is useful for your cool CL idea! To cite our work:
+
+```
+@inproceedings{prabhu2020online,
+  title={Online Continual Learning Without the Storage Constraint},
+  author={Prabhu, Ameya and Cai, Zhipeng and Dokania, Puneet and Torr, Philip and Koltun, Vladlen and Sener, Ozan},
+  booktitle={TBA},
+  month={TBA},
+  year={TBA}
+}
+```

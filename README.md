@@ -14,7 +14,7 @@ pip3 install -r requirements.txt
 
 ## Generating GLDv2 Metadata
 
-* You can download GLDv2 preprocessed metadata from [this link]() directly. However, to reproduce this follow the below instructions:
+* You can download GLDv2 preprocessed metadata from [this link]() directly. To reproduce this follow the below instructions:
 ```
 cd data_scripts/
 wget https://s3.amazonaws.com/google-landmark/metadata/train_clean.csv
@@ -23,6 +23,25 @@ cd ../scripts/
 python scrape_flickr.py
 ```
 
+* You can download the YFCC100M preprocessed metadata and images by following [this link]() directly. To reproduce this, please contact <zhipeng.cai>.
+
+## Usage
+
+## Replication
+
+## Additional Experiments
+
+* To reproduce our KNN scaling graphs (Figure 2), please run the following on a computer with high RAM:
+```
+cd scripts/
+python knn_scaling.py
+python plot_knn_results.py
+```
+
+* To reproduce CLOC results from our paper, please run the following:
+```
+Ask Zhipeng to fill this in
+```
 
 ##### If you discover any bugs in the code please contact me, I will cross-check them with my nightmares.
 

@@ -38,10 +38,6 @@ python knn_scaling.py
 python plot_knn_results.py
 ```
 
-* To reproduce CLOC results from our paper, please run the following:
-```
-Ask Zhipeng to fill this in
-```
 
 ##### If you discover any bugs in the code please contact me, I will cross-check them with my nightmares.
 

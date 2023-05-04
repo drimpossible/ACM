@@ -2,7 +2,7 @@
 
 This repository contains the code for the paper:
 
-**Online Continual Learning Without the Storage Constraint, Arxiv**  
+**Online Continual Learning Without the Storage Constraint**  
 [Ameya Prabhu](https://drimpossible.github.io), [Zhipeng Cai](), [Puneet Dokania](https://puneetkdokania.github.io), [Philip Torr](https://www.robots.ox.ac.uk/~phst/), [Vladlen Koltun](), [Ozan Sener]()
 [[Arxiv](https://arxiv.org/)]
 [[PDF]()]

@@ -1,6 +1,12 @@
 # ACM
 
-Codebase for adaptive continual memory
+This repository contains the code for the paper:
+
+**Online Continual Learning Without the Storage Constraint, Arxiv**  
+[Ameya Prabhu](https://drimpossible.github.io), [Zhipeng Cai](), [Puneet Dokania](https://puneetkdokania.github.io), [Philip Torr](https://www.robots.ox.ac.uk/~phst/), [Vladlen Koltun](https://sites.google.com/site/sernam), [Ozan Sener](https://www.bernardghanem.com/)
+[[Arxiv](https://arxiv.org/)]
+[[PDF](https://github.com/drimpossible/drimpossible.github.io/raw/master/documents/ACM.pdf)]
+[[Bibtex](https://github.com/drimpossible/ACM/#citation)]
 
 ## Installation and Dependencies
 
@@ -12,7 +18,7 @@ pip3 install -r requirements.txt
  
 * Create three additional folders in the repository `data/`, `data_scripts/` and `logs/` which will store the datasets and logs of experiments. Point `--order_file_dir` and `--log_dir` in `src/opts.py` to locations of these folders.
 
-## Generating GLDv2 Metadata
+## Generating Continual Google Landmarks V2 Dataset
 
 * You can download GLDv2 preprocessed metadata from [this link]() directly. To reproduce this follow the below instructions:
 ```
@@ -23,7 +29,7 @@ cd ../scripts/
 python scrape_flickr.py
 ```
 
-* You can download the YFCC100M preprocessed metadata and images by following [this link]() directly. To reproduce this, please contact <zhipeng.cai>.
+* You can download the YFCC100M preprocessed metadata and images by following [this link]() directly. To reproduce this, follow the instructions below.
 
 ## Usage
 
@@ -46,11 +52,10 @@ python plot_knn_results.py
 We hope ACM is a strong method for comparison, and this idea/codebase is useful for your cool CL idea! To cite our work:
 
 ```
-@inproceedings{prabhu2020online,
+@article{prabhu2023online,
   title={Online Continual Learning Without the Storage Constraint},
   author={Prabhu, Ameya and Cai, Zhipeng and Dokania, Puneet and Torr, Philip and Koltun, Vladlen and Sener, Ozan},
-  booktitle={TBA},
-  month={TBA},
-  year={TBA}
+  journal={arXiv preprint arXiv:},
+  year={2023}
 }
 ```

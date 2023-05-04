@@ -3,9 +3,9 @@
 This repository contains the code for the paper:
 
 **Online Continual Learning Without the Storage Constraint, Arxiv**  
-[Ameya Prabhu](https://drimpossible.github.io), [Zhipeng Cai](), [Puneet Dokania](https://puneetkdokania.github.io), [Philip Torr](https://www.robots.ox.ac.uk/~phst/), [Vladlen Koltun](https://sites.google.com/site/sernam), [Ozan Sener](https://www.bernardghanem.com/)
+[Ameya Prabhu](https://drimpossible.github.io), [Zhipeng Cai](), [Puneet Dokania](https://puneetkdokania.github.io), [Philip Torr](https://www.robots.ox.ac.uk/~phst/), [Vladlen Koltun](), [Ozan Sener]()
 [[Arxiv](https://arxiv.org/)]
-[[PDF](https://github.com/drimpossible/drimpossible.github.io/raw/master/documents/ACM.pdf)]
+[[PDF]()]
 [[Bibtex](https://github.com/drimpossible/ACM/#citation)]
 
 ## Installation and Dependencies
@@ -20,7 +20,7 @@ pip3 install -r requirements.txt
 
 ## Generating Continual Google Landmarks V2 Dataset
 
-* You can download GLDv2 preprocessed metadata from [this link]() directly. To reproduce this follow the below instructions:
+* You can download Continual Google Landmarks V2 metadata from [this link]() directly. To reproduce this follow the below instructions:
 ```
 cd data_scripts/
 wget https://s3.amazonaws.com/google-landmark/metadata/train_clean.csv

@@ -29,7 +29,9 @@ cd ../scripts/
 python scrape_flickr.py
 ```
 
-* You can download the YFCC100M preprocessed metadata and images by following [this link]() directly. To reproduce this, follow the instructions below.
+## Generating Continual YFCC100M (CLOC) Dataset
+
+* 
 
 ## Usage
 

@@ -39,7 +39,7 @@ python scrape_flickr.py
 
 ## Additional Experiments
 
-* To reproduce our KNN scaling graphs (Figure 2), please run the following on a computer with high RAM:
+* To reproduce our KNN scaling graphs (Figure 1b), please run the following on a computer with high RAM:
 ```
 cd scripts/
 python knn_scaling.py

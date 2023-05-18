@@ -57,7 +57,7 @@ We hope ACM is a strong method for comparison, and this idea/codebase is useful 
 @article{prabhu2023online,
   title={Online Continual Learning Without the Storage Constraint},
   author={Prabhu, Ameya and Cai, Zhipeng and Dokania, Puneet and Torr, Philip and Koltun, Vladlen and Sener, Ozan},
-  journal={arXiv preprint arXiv:},
+  journal={arXiv preprint arXiv:2305.09253},
   year={2023}
 }
 ```

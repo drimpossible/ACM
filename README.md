@@ -33,7 +33,7 @@ python scrape_flickr.py
 
 * 
 
-## Usage
+## Running the Code
 
 ## Replication
 
@@ -44,6 +44,13 @@ python scrape_flickr.py
 cd scripts/
 python knn_scaling.py
 python plot_knn_results.py
+```
+
+
+* To reproduce the blind classifier, please run the following:
+```
+cd scripts/
+python run_blind.py
 ```
 
 

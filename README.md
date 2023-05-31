@@ -31,7 +31,13 @@ python scrape_flickr.py
 
 ## Generating Continual YFCC100M (CLOC) Dataset
 
-* 
+* Download the `cloc.txt` file from [this link](https://www.idrive.com/idrive/sh/sh?k=h2s2w5d2o9) inside the `ADD_YOUR_DATASET_DIR/cloc` directory.
+* Download the dataset fast and scalably using img2dataset (read instructions in repo for faster distributed download capabilities):
+```
+pip install img2dataset
+img2dataset --url_list cyfcc.txt --input_format "txt" --output_form files output_folder images --process_count 16 --thread_count 64 --resize_mode no --skip_reencode True
+```
+* Then copy the file orders [train.txt]()  [hptune.txt]  [test.txt]` from [this link](https://www.idrive.com/idrive/sh/sh?k=h2s2w5d2o9) to the `data/cloc/` directory.
 
 ## Running the Code
 

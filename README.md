@@ -1,4 +1,4 @@
-# ACM (Under construction, will be ready before May end)
+# ACM
 
 This repository contains the code for the paper:
 
@@ -7,6 +7,10 @@ This repository contains the code for the paper:
 [[Arxiv](https://arxiv.org/abs/2305.09253)]
 [[PDF](https://drimpossible.github.io/documents/ACM.pdf)]
 [[Bibtex](https://github.com/drimpossible/ACM/#citation)]
+
+<p align="center">
+  <img src="https://github.com/drimpossible/ACM/blob/main/Model.png" width="600" alt="Figure which describes our ACM model">
+</p>
 
 ## Installation and Dependencies
 
@@ -18,7 +22,11 @@ pip3 install -r requirements.txt
  
 * Create three additional folders in the repository `data/`, `data_scripts/` and `logs/` which will store the datasets and logs of experiments. Point `--order_file_dir` and `--log_dir` in `src/opts.py` to locations of these folders.
 
-## Generating Continual Google Landmarks V2 Dataset
+## Dataset Setup
+
+- `YOUR_DATA_DIR` will contain two subfolders: `cglm` and `cloc`. Following are instructions to setup each dataset:
+
+### Continual Google Landmarks V2 (CGLM)
 
 * You can download Continual Google Landmarks V2 metadata from [this link]() directly. To reproduce this follow the below instructions:
 ```
@@ -29,15 +37,21 @@ cd ../scripts/
 python scrape_flickr.py
 ```
 
-## Generating Continual YFCC100M (CLOC) Dataset
+### Continual YFCC100M (CLOC)
 
-* Download the `cloc.txt` file from [this link](https://www.idrive.com/idrive/sh/sh?k=h2s2w5d2o9) inside the `ADD_YOUR_DATASET_DIR/cloc` directory.
-* Download the dataset fast and scalably using img2dataset (read instructions in repo for faster distributed download capabilities):
+* Download the `cloc.txt` file from [this link](https://www.robots.ox.ac.uk/~ameya/cloc.txt) inside the `YOUR_DATASET_DIR/cloc` directory.
+* Download the dataset parallely and scalably using img2dataset (read instructions in `img2dataset` repo for further distributed download options):
 ```
 pip install img2dataset
-img2dataset --url_list cyfcc.txt --input_format "txt" --output_form files output_folder images --process_count 16 --thread_count 64 --resize_mode no --skip_reencode True
+img2dataset --url_list cyfcc.txt --input_format "txt" --output_form webdataset output_folder images --process_count 16 --thread_count 256 --resize_mode no --skip_reencode True
 ```
-* Then copy the file orders [train.txt]()  [hptune.txt]  [test.txt]` from [this link](https://www.idrive.com/idrive/sh/sh?k=h2s2w5d2o9) to the `data/cloc/` directory.
+* Then download the order files for [train](https://www.robots.ox.ac.uk/~ameya/cloc_train.txt), [hptune](https://www.robots.ox.ac.uk/~ameya/cloc_hptune.txt) and  [test](https://www.robots.ox.ac.uk/~ameya/cloc_test.txt) to the `YOUR_DATASET_DIR/cloc/` directory.
+
+### Alternative Fast Dataset Setup
+
+-  There is a fast, direct mechanism to download and use our datasets implemented in [this repository](https://github.com/hammoudhasan/CLDatasets).
+-  Input the directory where the dataset was downloaded into `data_dir` field in `src/opts.py`.
+
 
 ## Running the Code
 

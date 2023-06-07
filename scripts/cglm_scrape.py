@@ -1,6 +1,7 @@
-import tqdm, requests
+import tqdm, requests, os
 from multiprocessing import Pool
 
+os.makedirs('./metadata/', exist_ok=True)
 PATH_TO_TRAINATTRIBUTIONS = './train_attribution.csv'
 
 ids = []

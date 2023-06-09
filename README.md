@@ -1,4 +1,4 @@
-# ACM
+# ACM (Tentatively ready by 11th June)
 
 This repository contains the code for the paper:
 
@@ -14,27 +14,45 @@ This repository contains the code for the paper:
 
 ## Installation and Dependencies
 
-* Install all requirements required to run the code on a Python 3.9 environment by:
+Our code was run on a 16GB RTX 3080Ti Laptop GPU with 64GB RAM and PyTorch >=1.13, although better GPU/RAM space will allow for faster experimentation.
+
+* Install all requirements required to run the code on a Python >=3.9 environment by:
  ```	
 # First, activate a new virtual environment
 pip3 install -r requirements.txt
  ```
- 
-* Create three additional folders in the repository `data/`, `data_scripts/` and `logs/` which will store the datasets and logs of experiments. Point `--order_file_dir` and `--log_dir` in `src/opts.py` to locations of these folders.
 
-## Dataset Setup
+## Recreating the Datasets
 
-- `YOUR_DATA_DIR` will contain two subfolders: `cglm` and `cloc`. Following are instructions to setup each dataset:
+- `YOUR_DATA_DIR` would contain two subfolders: `cglm` and `cloc`. Following are instructions to setup each dataset:
 
 ### Continual Google Landmarks V2 (CGLM)
 
-* You can download Continual Google Landmarks V2 metadata from [this link]() directly. To reproduce this follow the below instructions:
+* We provide the preprocessed full metadata dictionary at [this link]() to avoid the metadata recreation steps.
+
+#### Recreating Metadata
+
+* Download metadata by running the following commands in the `scripts` directory:
 ```
-cd data_scripts/
-wget https://s3.amazonaws.com/google-landmark/metadata/train_clean.csv
-wget https://s3.amazonaws.com/google-landmark/metadata/train_attribution.csv
-cd ../scripts/
-python scrape_flickr.py
+wget -c https://s3.amazonaws.com/google-landmark/metadata/train_attribution.csv
+python cglm_scrape.py
+```
+* Parse the XML files and organize the dictionary as key: image_id and value being a tuple of `response -> file` and `response -> meta` parts of the XML file. 
+
+#### Download Images
+
+* You can download Continual Google Landmarks V2 dataset by following instructions on their Github repository, run in the `DATA_DIR` directory:
+```
+wget -c https://raw.githubusercontent.com/cvdfoundation/google-landmark/master/download-dataset.sh
+mkdir train && cd train
+bash ../download-dataset.sh train 499
+```
+
+#### Downsizing the Dataset and Generating Order Files
+
+* Add instructions for this part.
+```
+
 ```
 
 ### Continual YFCC100M (CLOC)

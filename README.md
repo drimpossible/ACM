@@ -22,22 +22,17 @@ Our code was run on a 16GB RTX 3080Ti Laptop GPU with 64GB RAM and PyTorch >=1.1
 pip3 install -r requirements.txt
  ```
 
+### Fast Dataset Setup
+
+-  There is a fast, direct mechanism to download and use our datasets implemented in [this repository](https://github.com/hammoudhasan/CLDatasets).
+-  Input the directory where the dataset was downloaded into `data_dir` field in `src/opts.py`.
+-  All codes in this repository were run on this dataset.
+
 ## Recreating the Datasets
 
 - `YOUR_DATA_DIR` would contain two subfolders: `cglm` and `cloc`. Following are instructions to setup each dataset:
 
 ### Continual Google Landmarks V2 (CGLM)
-
-* We provide the preprocessed full metadata dictionary at [this link]() to avoid the metadata recreation steps.
-
-#### Recreating Metadata
-
-* Download metadata by running the following commands in the `scripts` directory:
-```
-wget -c https://s3.amazonaws.com/google-landmark/metadata/train_attribution.csv
-python cglm_scrape.py
-```
-* Parse the XML files and organize the dictionary as key: image_id and value being a tuple of `response -> file` and `response -> meta` parts of the XML file. 
 
 #### Download Images
 
@@ -48,14 +43,22 @@ mkdir train && cd train
 bash ../download-dataset.sh train 499
 ```
 
-#### Downsizing the Dataset and Generating Order Files
+#### Recreating Metadata
 
-* Add instructions for this part.
+* Download metadata by running the following commands in the `scripts` directory:
 ```
-
+wget -c https://s3.amazonaws.com/google-landmark/metadata/train_attribution.csv
+python cglm_scrape.py
 ```
+* Parse the XML files and organize it as a dictionary. 
+* Using the `upload_date` instead of date from EXIF metadata to have unique timestamps, we get this [new order file](www.robots.ox.ac.uk/~ameya/meta_images_and_authors.pkl). 
+* Note: New file generated in June 2023, differs from previous order file at [CLDatasets](https://github.com/hammoudhasan/CLDatasets) repo. Do not crosscompare.
+* However, the trends remain similar on both, the label correlation does not simply go away.
+* Now, select only images that are a part of the order file and your dataset should be ready!
 
 ### Continual YFCC100M (CLOC)
+
+#### Download Images
 
 * Download the `cloc.txt` file from [this link](https://www.robots.ox.ac.uk/~ameya/cloc.txt) inside the `YOUR_DATASET_DIR/cloc` directory.
 * Download the dataset parallely and scalably using img2dataset (read instructions in `img2dataset` repo for further distributed download options):
@@ -63,13 +66,10 @@ bash ../download-dataset.sh train 499
 pip install img2dataset
 img2dataset --url_list cyfcc.txt --input_format "txt" --output_form webdataset output_folder images --process_count 16 --thread_count 256 --resize_mode no --skip_reencode True
 ```
+
+#### Download Meta-data
+
 * Then download the order files for [train](https://www.robots.ox.ac.uk/~ameya/cloc_train.txt), [hptune](https://www.robots.ox.ac.uk/~ameya/cloc_hptune.txt) and  [test](https://www.robots.ox.ac.uk/~ameya/cloc_test.txt) to the `YOUR_DATASET_DIR/cloc/` directory.
-
-### Alternative Fast Dataset Setup
-
--  There is a fast, direct mechanism to download and use our datasets implemented in [this repository](https://github.com/hammoudhasan/CLDatasets).
--  Input the directory where the dataset was downloaded into `data_dir` field in `src/opts.py`.
-
 
 ## Running the Code
 

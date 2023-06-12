@@ -69,7 +69,7 @@ img2dataset --url_list cyfcc.txt --input_format "txt" --output_form webdataset o
 
 #### Download Meta-data
 
-* Then download the order files for [train](https://www.robots.ox.ac.uk/~ameya/cloc_train.txt), [hptune](https://www.robots.ox.ac.uk/~ameya/cloc_hptune.txt) and  [test](https://www.robots.ox.ac.uk/~ameya/cloc_test.txt) to the `YOUR_DATASET_DIR/cloc/` directory.
+* [Pending] Then download the order files for [train](https://www.robots.ox.ac.uk/~ameya/cloc_train.txt), [hptune](https://www.robots.ox.ac.uk/~ameya/cloc_hptune.txt) and  [test](https://www.robots.ox.ac.uk/~ameya/cloc_test.txt) to the `YOUR_DATASET_DIR/cloc/` directory.
 
 ## Running the Code
 

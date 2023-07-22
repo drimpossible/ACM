@@ -61,7 +61,8 @@ python cglm_scrape.py
 #### Download Images
 
 * Download the `cloc.txt` file from [this link](https://www.robots.ox.ac.uk/~ameya/cloc.txt) inside the `YOUR_DATASET_DIR/cloc` directory.
-* Download the dataset parallely and scalably using img2dataset (read instructions in `img2dataset` repo for further distributed download options):
+* The `cloc.txt` file contains 36.8M image links, sanitizing the original download link from CLOC.
+* Download the dataset parallely and scalably using img2dataset, finishes in <a day on a 8-node server (read instructions in `img2dataset` repo for further distributed download options):
 ```
 pip install img2dataset
 img2dataset --url_list cyfcc.txt --input_format "txt" --output_form webdataset output_folder images --process_count 16 --thread_count 256 --resize_mode no --skip_reencode True

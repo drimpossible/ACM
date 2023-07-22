@@ -1,4 +1,4 @@
-# ACM (Tentatively ready by 25th June)
+# ACM
 
 This repository contains the code for the paper:
 

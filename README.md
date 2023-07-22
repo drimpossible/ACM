@@ -50,10 +50,10 @@ bash ../download-dataset.sh train 499
 wget -c https://s3.amazonaws.com/google-landmark/metadata/train_attribution.csv
 python cglm_scrape.py
 ```
-* Parse the XML files and organize it as a dictionary. 
-* Using the `upload_date` instead of date from EXIF metadata to have unique timestamps, we get this [new order file](www.robots.ox.ac.uk/~ameya/meta_images_and_authors.pkl). 
-* Note: New file generated in June 2023, differs from previous order file at [CLDatasets](https://github.com/hammoudhasan/CLDatasets) repo. Do not crosscompare.
-* However, the trends remain similar on both, the label correlation does not simply go away.
+* Parse the XML files and organize it as a dictionary.
+* Ordering used in the paper is available to download [from here]().
+* Using the `upload_date` instead of date from EXIF metadata (more unique timestamps and more faithful to the story), we get this [new order file](https://www.robots.ox.ac.uk/~ameya/meta_images_and_authors.pkl). Note: New file generated in June 2023, differs from order file at [CLDatasets](https://github.com/hammoudhasan/CLDatasets) repo. Do not crosscompare.
+* However, no substantial changes observed in trends. They remain similar on both, the label correlation does not simply go away (Slightly increases with better ordering, by breaking ties of same timestamps!)
 * Now, select only images that are a part of the order file and your dataset should be ready!
 
 ### Continual YFCC100M (CLOC)

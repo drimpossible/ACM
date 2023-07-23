@@ -59,7 +59,7 @@ python cglm_scrape.py
 #### Extremely Fast Image Downloader
 
 * Download the `cloc.txt` file from [this link](https://www.robots.ox.ac.uk/~ameya/cloc.txt) inside the `YOUR_DATASET_DIR/cloc` directory.
-* The `cloc.txt` file contains 36.8M image links, sanitizing the original download link from CLOC.
+* The `cloc.txt` file contains 36.8M image links, removing missing/broken links from the original download file of CLOC.
 * Download the dataset parallely and scalably using img2dataset, finishes in <a day on a 8-node server (read instructions in `img2dataset` repo for further distributed download options):
 ```
 pip install img2dataset

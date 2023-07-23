@@ -52,13 +52,11 @@ python cglm_scrape.py
 ```
 * Parse the XML files and organize it as a dictionary.
 * Ordering used in the paper is available to download [from here]().
-* Using the `upload_date` instead of date from EXIF metadata (more unique timestamps and more faithful to the story), we get this [new order file](https://www.robots.ox.ac.uk/~ameya/meta_images_and_authors.pkl). Note: New file generated in June 2023, differs from order file at [CLDatasets](https://github.com/hammoudhasan/CLDatasets) repo. Do not crosscompare.
-* However, no substantial changes observed in trends. They remain similar on both, the label correlation does not simply go away (Slightly increases with better ordering, by breaking ties of same timestamps!)
 * Now, select only images that are a part of the order file and your dataset should be ready!
 
 ### Continual YFCC100M (CLOC)
 
-#### Download Images
+#### Extremely Fast Image Downloader
 
 * Download the `cloc.txt` file from [this link](https://www.robots.ox.ac.uk/~ameya/cloc.txt) inside the `YOUR_DATASET_DIR/cloc` directory.
 * The `cloc.txt` file contains 36.8M image links, sanitizing the original download link from CLOC.
@@ -67,10 +65,7 @@ python cglm_scrape.py
 pip install img2dataset
 img2dataset --url_list cyfcc.txt --input_format "txt" --output_form webdataset output_folder images --process_count 16 --thread_count 256 --resize_mode no --skip_reencode True
 ```
-
-#### Download Meta-data
-
-* [Pending] Then download the order files for [train](https://www.robots.ox.ac.uk/~ameya/cloc_train.txt), [hptune](https://www.robots.ox.ac.uk/~ameya/cloc_hptune.txt) and  [test](https://www.robots.ox.ac.uk/~ameya/cloc_test.txt) to the `YOUR_DATASET_DIR/cloc/` directory.
+* Match the urls and file indexes to the idx for training script given in the original CLOC repo via this script []().
 
 ## Running the Code
 
@@ -94,6 +89,11 @@ python run_blind.py
 
 
 ##### If you discover any bugs in the code please contact me, I will cross-check them with my nightmares.
+
+## Updates
+
+* New ordering files using the `upload_date` instead of date from EXIF metadata (more unique timestamps and more faithful to the story), we get this [new order file](https://www.robots.ox.ac.uk/~ameya/meta_images_and_authors.pkl). Differerent from order file at [CLDatasets](https://github.com/hammoudhasan/CLDatasets) repo. Do not crosscompare.
+* However, no substantial changes observed in trends! The label correlation does not go away (slightly increases infact with better ordering, by breaking ties of same timestamps which led to random ordering!)
 
 ## Citation
 

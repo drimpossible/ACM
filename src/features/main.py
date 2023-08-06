@@ -131,8 +131,3 @@ if __name__ == '__main__':
         ACM(opt=opt, model=model, ftmodel=ftmodel, logger=console_logger)
     elif opt.mode=='ACM':
         ACM(opt=opt, model=model, logger=console_logger)
-    else:
-        assert(opt.model!='xcit_dino')
-        model.fc = EmbedLinearClassifier(dim=2048, embed_size=opt.embed_size, num_classes=opt.num_classes, cosfc=opt.cosine)
-        ER_train(opt=opt, model=model, image_paths=train_images_path, y=train_y_path, routing_index_path=train_routing_index_path, mask_values_path = mask_values_path, logger=console_logger, ftsize=opt.embed_size)
-        ER_test(opt=opt, image_paths=test_images_path, image_labels=test_y_path, model=model)

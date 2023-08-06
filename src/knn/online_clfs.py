@@ -1,11 +1,9 @@
+import numpy as np
+import pandas as pd
+import hnswlib, threading, pickle, math, torch, scipy, sklearn
 from vowpalwabbit import Workspace
 from vowpalwabbit.dftovw import DFtoVW, SimpleLabel, Feature
-from sklearn.neighbors import KNeighborsClassifier
-import pandas as pd
-import hnswlib
-import numpy as np
-import threading
-import pickle, math
+
 
 class Normalizer():
     def __init__(self, size=None, dim=None, mean=None, unnormalized_var=None):
@@ -21,68 +19,126 @@ class Normalizer():
             self.mean = np.zeros(dim)
             self.var_unnormalized = np.zeros(dim)
 
-    def update_and_transform(self, X):
-        assert(X.shape[0] >= 1 and X.shape[1] == self.dim and len(X.shape)==2)
+    def update_and_transform(self, x):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
 
-        for idx in range(X.shape[0]):
+        for idx in range(x.shape[0]):
             self.size += 1
-            new_mean = self.mean + (X[idx] - self.mean)/self.size
-            self.var_unnormalized = self.var_unnormalized + (X[idx] - self.mean)*(X[idx] - new_mean)
+            new_mean = self.mean + (x[idx] - self.mean)/self.size
+            self.var_unnormalized = self.var_unnormalized + (x[idx] - self.mean)*(x[idx] - new_mean)
             self.mean = new_mean
             std = np.sqrt(self.var_unnormalized/(self.size-1))
-            X[idx] = X[idx] - self.mean/std 
-        return X
+            x[idx] = x[idx] - self.mean/std 
+        return x
 
-    def transform(self, X):
-        assert(X.shape[0] >= 1 and X.shape[1] == self.dim and len(X.shape)==2)
+    def transform(self, x):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+
         if self.size > 2:
             std = np.sqrt(self.var_unnormalized/(self.size-1))
-            return (X - self.mean)/std 
+            return (x - self.mean)/std 
         else:
-            return X
+            return x
 
 
-class OLR():
+class OnlineLogisticClassification_VowpalWabbit():
     def __init__(self, opt):
         self.model = Workspace(oaa=opt.num_classes, loss_function='logistic', b=30, l=opt.lr)
         self.cols = ['label']
         for i in range(opt.feat_size): self.cols.append('f_'+str(i))
 
-    def learn_step(self, X, y):
-        df = pd.DataFrame(X, columns=self.cols[1:])
+    def learn_step(self, x, y):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        df = pd.DataFrame(x, columns=self.cols[1:])
         df['label'] = y[0].tolist()
         feat = DFtoVW(df=df, label=SimpleLabel('label'), features=[Feature(col) for col in self.cols[1:]])
         example = feat.convert_df()[0]
         self.model.learn(example)
 
-    def predict_step(self, X, num_neighbours):
-        df = pd.DataFrame(X, columns=self.cols[1:])
+    def predict_step(self, x, y=None):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        df = pd.DataFrame(x, columns=self.cols[1:])
         df['label'] = [-1]
         feat = DFtoVW(df=df, label=SimpleLabel('label'), features=[Feature(col) for col in self.cols[1:]])
         example = feat.convert_df()[0]
         return self.model.predict(example)
 
 
-class SVM():
+class OnlineSVM_VowpalWabbit():
     def __init__(self, opt):
         self.model = Workspace(oaa=opt.num_classes, loss_function='hinge', b=30, l=opt.lr, l2=opt.wd)
         self.cols = ['label']
         for i in range(opt.feat_size): self.cols.append('f_'+str(i))
 
-    def learn_step(self, X, y):
-        df = pd.DataFrame(X, columns=self.cols[1:])
+    def learn_step(self, x, y):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        df = pd.DataFrame(x, columns=self.cols[1:])
         df['label'] = y[0].tolist()
         feat = DFtoVW(df=df, label=SimpleLabel('label'), features=[Feature(col) for col in self.cols[1:]])
         example = feat.convert_df()[0]
         self.model.learn(example)
 
-    def predict_step(self, X, num_neighbours):
-        df = pd.DataFrame(X, columns=self.cols[1:])
+    def predict_step(self, x, y=None):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        df = pd.DataFrame(x, columns=self.cols[1:])
         df['label'] = [-1]
         feat = DFtoVW(df=df, label=SimpleLabel('label'), features=[Feature(col) for col in self.cols[1:]])
         example = feat.convert_df()[0]
         return self.model.predict(example)
 
+
+class OnlineSVM_Scikit():
+    def __init__(self, opt):
+        self.clf = sklearn.linear_model.SGDClassifier(loss='hinge', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
+    
+    def learn_step(self, x, y):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        self.clf.partial_fit(x, y, classes=np.arange(self.num_classes))
+
+    def predict_step(self, x, y=None):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        return self.clf.predict(x)
+
+
+class OnlineLogisticClassification_Scikit():
+    def __init__(self, opt):
+        self.clf = sklearn.linear_model.SGDClassifier(loss='log_loss', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
+        self.num_classes = opt.num_classes
+
+    def learn_step(self, x, y):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        self.clf.partial_fit(x, y, classes=np.arange(self.num_classes))
+
+    def predict_step(self, x, y=None):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        return self.clf.predict(x)
+    
+
+class HuberLossClassifier_Scikit():
+    def __init__(self, opt):
+        self.clf = sklearn.linear_model.SGDClassifier(loss='modified_huber', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
+        self.num_classes = opt.num_classes
+
+    def learn_step(self, x, y):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        self.clf.partial_fit(x, y, classes=np.arange(self.num_classes))
+
+    def predict_step(self, x, y=None):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        return self.clf.predict(x)
+    
 
 class ContextualMemoryTree():
     def __init__(self, opt):
@@ -91,58 +147,81 @@ class ContextualMemoryTree():
         self.cols = ['label']
         for i in range(opt.feat_size): self.cols.append('f_'+str(i))
 
-    def learn_step(self, X, y):
-        df = pd.DataFrame(X, columns=self.cols[1:])
+    def learn_step(self, x, y):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        df = pd.DataFrame(x, columns=self.cols[1:])
         df['label'] = y[0].tolist()
         feat = DFtoVW(df=df, label=SimpleLabel('label'), features=[Feature(col) for col in self.cols[1:]])
         example = feat.convert_df()[0]
         self.model.learn(example)
 
-    def predict_step(self, X, num_neighbours):
-        df = pd.DataFrame(X, columns=self.cols[1:])
+    def predict_step(self, x, y=None):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        df = pd.DataFrame(x, columns=self.cols[1:])
         df['label'] = [-1]
         feat = DFtoVW(df=df, label=SimpleLabel('label'), features=[Feature(col) for col in self.cols[1:]])
         example = feat.convert_df()[0]
         return self.model.predict(example)
 
 
-class KNN():
+class KNearestNeighbours():
     def __init__(self, opt):
         self.num_neighbours = opt.num_neighbours
-        self.train_X, self.train_y = None, None
+        self.train_x, self.train_y = None, None
+        self.num_neighbours = 1
 
-    def learn_step(self, X, y):
-        if self.train_X is not None:
-            self.train_y = np.concatenate((self.train_y, y), axis=0)
-            self.train_X = np.concatenate((self.train_X, X), axis=0)
+        # Set distance function
+        if opt.search_metric == 'cosine':
+            self.dist = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+        elif opt.search_metric == 'l2':
+            self.dist = torch.nn.PairwiseDistance(p=2)
+        assert(opt.search_metric in ['cosine', 'l2'])
+
+
+    def learn_step(self, x, y):
+        with torch.no_grad():
+            if x.ndim == 1:
+                x = x.unsqueeze(0)
+
+        if self.train_x is not None:
+            self.train_y = torch.cat((self.train_y, y), dim=0)
+            self.train_x = torch.cat((self.train_x, x), dim=0)
         else:
             self.train_y = y
-            self.train_X = X
-
-    def predict_step(self, X):
-        model = KNeighborsClassifier(n_neighbors=self.num_neighbours)
-        model.fit(self.train_X, self.train_y)
-        out = model.predict(X)
-        return out
+            self.train_x = x
 
 
-class HNSW_KNN():
+    def predict_step(self, x, y=None):
+        with torch.no_grad():
+            if x.ndim == 1:
+                x = x.unsqueeze(0)
+
+        _, idxes = torch.topk(self.dist(x, self.train_x), 1, largest=False)
+        labels, _ = torch.mode(self.train_y[idxes], dim=1)
+
+        return labels
+
+
+class ApproxKNearestNeighbours():
     # https://raw.githubusercontent.com/nmslib/nmslib/master/manual/latex/manual.pdf
     def __init__(self, opt):
-        self.index = hnswlib.Index(space=opt.search_metric, dim=opt.feat_size)
+        self.index = hnswlib.Index(space=opt.search_metric, dim=opt.feature_dim)
         self.lock = threading.Lock()
-        self.idx2label = {}
         self.cur_idx = 0
-        self.dset_size = 1024
+        self.dset_size = 65536
+        self.idx2label = np.zeros(self.dset_size, dtype=np.int16)
         self.index.init_index(max_elements=self.dset_size, ef_construction=opt.HNSW_ef, M=opt.HNSW_M)
-        self.num_neighbours = opt.num_neighbours 
-        #self.set_num_threads(num_threads=opt.num_online_workers)
+        self.num_neighbours = 1 
 
-    def learn_step(self, X, y):
-#        print(X.shape, y.shape)
-        assert(X.shape[0]==y.shape[0])
 
-        num_added = X.shape[0]
+    def learn_step(self, x, y):
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
+        assert(x.shape[0]==y.shape[0])
+    
+        num_added = x.shape[0]
         start_idx = self.cur_idx
         self.cur_idx += num_added
         
@@ -151,14 +230,15 @@ class HNSW_KNN():
                 self.dset_size = pow(2, math.ceil(math.log2(self.cur_idx)))
                 self.dset_size *= 4
                 self.index.resize_index(self.dset_size)
+
+                new_idx2label = np.zeros(self.dset_size, dtype=np.int16)
+                new_idx2label[:start_idx] = self.idx2label[:start_idx]
+                self.idx2label = new_idx2label
         
-        idx = []
-        for label in range(y.shape[0]):
-            idx.append(start_idx)
-            self.idx2label[start_idx] = y[label]
-            start_idx += 1
+        idx = np.arange(start_idx, start_idx + num_added)
+        self.idx2label[start_idx:start_idx+num_added] = y
         
-        self.index.add_items(data=X, ids=np.asarray(idx))
+        self.index.add_items(data=x, ids=np.asarray(idx))
 
     def set_ef(self, ef):
         self.index.set_ef(ef)
@@ -177,20 +257,137 @@ class HNSW_KNN():
     def set_num_threads(self, num_threads):
         self.index.set_num_threads(num_threads)
 
-    def predict_step(self, X, num_neighbours, mode='multiclass_clf'):
-        assert(mode in ['multiclass_clf','retrieval'])
-        
-        idx_pred_list, distances = self.index.knn_query(data=X, k=num_neighbours)
-        labels = []
-        
-        for idx_pred in idx_pred_list:
-            possible_labels = np.array([self.idx2label[idx] for idx in idx_pred]).astype(int)
+    def predict_step(self, x, y):
+        # Note: y is used only for selecting k for the next step
+        # Ideally this should be done in learn_step but to avoid computing neighbours twice, we do it here.
+        if x.ndim == 1:
+            x = x[np.newaxis, :]
 
-            if mode == 'multiclass_clf':
-                counts = np.bincount(possible_labels)
-                label = np.argmax(counts)
-                labels.append(label if counts[label] > 1 else possible_labels[0])
-            elif mode == 'retrieval':
-                labels.append(possible_labels)
+        idxes, _ = self.index.knn_query(data=x, k=1)
+        neighbour_labels = self.idx2label[idxes]
+        pred_labels, _ = scipy.stats.mode(neighbour_labels, axis=1)
+        return pred_labels
 
-        return np.array(labels)
+
+class NearestClassMean():
+    def __init__(self, opt):
+        with torch.no_grad():
+            # Class means is class sums, divided by number of samples
+            self.class_sums = torch.zeros((opt.num_classes, opt.feature_dim))
+            self.num_samples = torch.zeros(opt.num_classes, 1)
+
+            # Set distance function
+            if opt.search_metric == 'cosine':
+                self.dist = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+            elif opt.search_metric == 'l2':
+                self.dist = torch.nn.PairwiseDistance(p=2)
+            assert(opt.search_metric in ['cosine', 'l2'])
+            
+            if opt.gpu:
+                self.class_sums = self.class_sums.cuda()
+                self.num_samples = self.num_samples.cuda()
+                self.dist = self.dist.cuda()
+            
+
+    def learn_step(self, x, y):
+        with torch.no_grad():
+
+            # Update class mean and number of samples
+            self.class_sums[y] += x
+            self.num_samples[y] += 1
+    
+
+    def predict_step(self, x, y=None):
+        with torch.no_grad():
+
+            class_means = self.class_sums / (self.num_samples+1e-6)
+            distances = self.dist(x, class_means)
+            distances = torch.where(distances!=0, distances, 1e5)
+            return torch.argmin(distances)
+        
+
+class StreamingLinearDiscriminantAnalysis():
+    def __init__(self, opt):
+        with torch.no_grad():
+            self.feature_dim = opt.feature_dim
+            self.num_classes = opt.num_classes
+            self.shrinkage_param = 1e-4
+            self.streaming_update_sigma = True
+
+            # setup weights for SLDA
+            self.muK = torch.zeros((opt.num_classes, opt.feature_dim))
+            self.cK = torch.zeros(opt.num_classes)
+            self.Sigma = torch.ones((opt.feature_dim, opt.feature_dim))
+            self.Lambda = torch.zeros_like(self.Sigma)
+            self.num_updates = 0
+            self.prev_num_updates = -1
+
+            if opt.gpu:
+                self.muK = self.muK.cuda()
+                self.cK = self.cK.cuda()
+                self.Sigma = self.Sigma.cuda()
+                self.Lambda = self.Lambda.cuda()
+
+
+    def learn_step(self, x, y):
+        # make sure things are the right shape
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+
+        with torch.no_grad():
+            # covariance updates
+            if self.streaming_update_sigma:
+                x_minus_mu = (x - self.muK[y])
+                mult = torch.matmul(x_minus_mu.transpose(1, 0), x_minus_mu)
+                delta = mult * self.num_updates / (self.num_updates + 1)
+                self.Sigma = (self.num_updates * self.Sigma + delta) / (self.num_updates + 1)
+
+            # update class means
+            self.muK[y, :] += (x - self.muK[y, :]) / (self.cK[y] + 1).unsqueeze(1)
+            self.cK[y] += 1
+            self.num_updates += 1
+
+
+    def predict_step(self, x, y=None):
+        with torch.no_grad():
+            # initialize parameters for testing
+            num_samples = x.shape[0]
+            scores = torch.empty((num_samples, self.num_classes))
+
+            # compute/load Lambda matrix
+            if self.prev_num_updates != self.num_updates:
+                # there have been updates to the model, compute Lambda
+                print('\nFirst predict since model update...computing Lambda matrix...')
+                Lambda = torch.pinverse(
+                    (1 - self.shrinkage_param) * self.Sigma + self.shrinkage_param * torch.eye(self.input_shape)).to(self.Lambda.device) 
+                self.Lambda = Lambda
+                self.prev_num_updates = self.num_updates
+            else:
+                Lambda = self.Lambda
+
+            # parameters for predictions
+            M = self.muK.transpose(1, 0)
+            W = torch.matmul(Lambda, M)
+            c = 0.5 * torch.sum(M * W, dim=0)
+
+            # loop in mini-batches over test samples
+            scores = torch.matmul(x, W) - c
+
+            # return predictions or probabilities
+            return torch.argmax(scores, dim=1)
+
+
+    def fit_base(self, X, y):
+        print('\nFitting Base...')
+
+        # update class means
+        for k in torch.unique(y):
+            self.muK[k] = X[y == k].mean(0)
+            self.cK[k] = X[y == k].shape[0]
+        self.num_updates = X.shape[0]
+
+        print('\nEstimating initial covariance matrix...')
+        from sklearn.covariance import OAS
+        cov_estimator = OAS(assume_centered=True)
+        cov_estimator.fit((X - self.muK[y]).cpu().numpy())
+        self.Sigma = torch.from_numpy(cov_estimator.covariance_).float().to(self.Sigma.device) 

@@ -119,11 +119,10 @@ class EmbedLinearClassifier(nn.Module):
     def __init__(self, dim, embed_size, num_classes, cosfc=False):
         super(EmbedLinearClassifier, self).__init__()
         self.embed = None
-        if dim != embed_size:
-            self.embed = nn.Linear(dim, embed_size)
-            self.norm = nn.Sequential(nn.BatchNorm1d(embed_size), nn.ReLU(inplace=True))
-            self.embed.weight.data.normal_(mean=0.0, std=0.01)
-            self.embed.bias.data.zero_()
+        self.embed = nn.Linear(dim, embed_size)
+        self.norm = nn.Sequential(nn.BatchNorm1d(embed_size), nn.ReLU(inplace=True))
+        self.embed.weight.data.normal_(mean=0.0, std=0.01)
+        self.embed.bias.data.zero_()
         if cosfc:
             self.fc = CosineLinear(embed_size, num_classes)
         else:

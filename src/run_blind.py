@@ -27,7 +27,7 @@ def get_preds(k):
 
 if __name__ == '__main__':
     global logdir, labels 
-    dataset='CLEAR100' # Choose one from: ['CLEAR10', 'CLEAR100', 'CGLM', 'CLOC']
+    dataset='CLOC' # Choose one from: ['CLEAR10', 'CLEAR100', 'CGLM', 'CLOC']
     num_processes = 16
     path_to_cldatasets = '/media/bayesiankitten/Hanson/CLDatasets/data/' # Please set directory for labels in the CLDatasets folder
     logdir = '/media/bayesiankitten/Alexander/ACM/blind_logs/' # Please set directory for logs
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     # Load labels file
     # Note: When actually picking the k, use pretrain_labels.hdf5 file. This is for analysis plots, shown in the paper (both have same results, but different purpose).
     with h5py.File(f'{path_to_cldatasets}/{dataset}/order_files/train_labels.hdf5', 'r') as f:
-        labels = np.array(f['store_list'])
+        labels = np.array(f['store_list'])[1:]
 
     labels = np.array(labels, dtype=np.uint16)
     pred = np.ones_like(labels)[1:]

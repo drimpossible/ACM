@@ -8,7 +8,7 @@ def parse_args():
    parser.add_argument('--online_classifier', type=str, default='ApproxKNearestNeighbours', help='Name of online classifier', choices=['OnlineLogisticClassification_VowpalWabbit', 
                                                                 'OnlineSVM_VowpalWabbit', 'OnlineSVM_Scikit', 'OnlineLogisticClassification_Scikit', 
                                                                 'HuberLossClassifier_Scikit', 'ContextualMemoryTree',  'KNearestNeighbours', 'ApproxKNearestNeighbours', 
-                                                                'NearestClassMean', 'StreamingLinearDiscriminantAnalysis'])
+                                                                'NearestClassMeanCosine', 'NearestClassMeanL2', 'StreamingLinearDiscriminantAnalysis'])
    parser.add_argument('--dataset', type=str, default='cglm', help='Name of dataset', choices=['clear10', 'clear100', 'cglm', 'cloc'])
    parser.add_argument('--search_metric', type=str, default='cosine', choices=['cosine', 'l2'], help='Types of search')
    parser.add_argument('--HNSW_ef', type=int, default=200, help='Types of search')

@@ -70,6 +70,12 @@ if __name__ == '__main__':
     total_time = time.time() - start_time
     print(f'Total time taken: {total_time:.4f}')
     os.makedirs(opt.log_dir, exist_ok=True)
-
     np.save(os.path.join(opt.log_dir, f"{opt.model}_{opt.dataset}_{opt.online_classifier}_{opt.lr}_{opt.wd}_online_preds_{opt.online_exp_name}.npy"), predarr[256:])
     np.save(os.path.join(opt.log_dir, f"{opt.model}_{opt.dataset}_{opt.online_classifier}_{opt.lr}_{opt.wd}_online_labels_{opt.online_exp_name}.npy"), labelarr[256:])
+
+    print('==> Testing..')
+    start_time = time.time()
+
+    preds = online_clf.predict_step(x=test_X, y=test_y)
+    np.save(os.path.join(opt.log_dir, f"{opt.model}_{opt.dataset}_{opt.online_classifier}_{opt.lr}_{opt.wd}_test_preds_{opt.online_exp_name}.npy"), preds)
+    np.save(os.path.join(opt.log_dir, f"{opt.model}_{opt.dataset}_{opt.online_classifier}_{opt.lr}_{opt.wd}_test_labels_{opt.online_exp_name}.npy"), test_y)

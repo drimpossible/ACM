@@ -269,19 +269,13 @@ class ApproxKNearestNeighbours():
         return pred_labels
 
 
-class NearestClassMean():
+class NearestClassMeanCosine():
     def __init__(self, opt):
         with torch.no_grad():
             # Class means is class sums, divided by number of samples
-            self.class_sums = torch.zeros((opt.num_classes, opt.feature_dim))
-            self.num_samples = torch.zeros(opt.num_classes, 1)
-
-            # Set distance function
-            if opt.search_metric == 'cosine':
-                self.dist = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
-            elif opt.search_metric == 'l2':
-                self.dist = torch.nn.PairwiseDistance(p=2)
-            assert(opt.search_metric in ['cosine', 'l2'])
+            self.class_sums = torch.zeros((1, opt.feature_dim, opt.num_classes))
+            self.num_samples = torch.zeros((1,1,opt.num_classes))
+            self.dist = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
             
             if opt.gpu:
                 self.class_sums = self.class_sums.cuda()
@@ -290,20 +284,81 @@ class NearestClassMean():
             
 
     def learn_step(self, x, y):
-        with torch.no_grad():
+        x = torch.from_numpy(x)
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+        x = x.unsqueeze(2)
 
+        with torch.no_grad():
             # Update class mean and number of samples
-            self.class_sums[y] += x
-            self.num_samples[y] += 1
+            if self.num_samples.shape[0] <= y.shape[0]:
+                for index in range(self.num_samples.shape[0]):
+                    if (y==index).sum() == 0:
+                        continue
+                    self.class_sums[:,:,index] += x[y==index].sum(dim=0).squeeze()
+                    self.num_samples[index] += (y==index).sum()
+            else:
+                for index in range(y.shape[0]):
+                    self.class_sums[0,:,y[index]] += x[index].squeeze()
+                    self.num_samples[y[index]] += 1
     
 
     def predict_step(self, x, y=None):
-        with torch.no_grad():
+        x = torch.from_numpy(x)
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+        x = x.unsqueeze(2)
 
+        with torch.no_grad():
             class_means = self.class_sums / (self.num_samples+1e-6)
             distances = self.dist(x, class_means)
             distances = torch.where(distances!=0, distances, 1e5)
-            return torch.argmin(distances)
+            return torch.argmin(distances, dim=1)
+        
+
+class NearestClassMeanL2():
+    def __init__(self, opt):
+        with torch.no_grad():
+            # Class means is class sums, divided by number of samples
+            self.class_sums = torch.zeros((opt.num_classes, opt.feature_dim))
+            self.num_samples = torch.zeros((opt.num_classes,1))
+                        
+            if opt.gpu:
+                self.class_sums = self.class_sums.cuda()
+                self.num_samples = self.num_samples.cuda()
+                self.dist = self.dist.cuda()
+            
+
+    def learn_step(self, x, y):
+        x = torch.from_numpy(x)
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+        
+        with torch.no_grad():
+            # Update class mean and number of samples
+            if self.num_samples.shape[0] <= y.shape[0]:
+                for index in range(self.num_samples.shape[0]):
+                    if (y==index).sum() == 0:
+                        continue
+                    self.class_sums[index,:] += x[y==index].sum(dim=0).squeeze()
+                    self.num_samples[index] += (y==index).sum()
+            else:
+                for index in range(y.shape[0]):
+                    self.class_sums[y[index],:] += x[index].squeeze()
+                    self.num_samples[y[index]] += 1
+    
+
+    def predict_step(self, x, y=None):
+        x = torch.from_numpy(x)
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+        
+        with torch.no_grad():
+            class_means = (self.class_sums / (self.num_samples+1e-6)).unsqueeze(0)
+            x = x.unsqueeze(0)
+            distances = torch.cdist(x, class_means, p=2.0).squeeze(dim=0)
+            distances = torch.where(distances!=0, distances, 1e5)
+            return torch.argmin(distances, dim=1)    
         
 
 class StreamingLinearDiscriminantAnalysis():
@@ -331,6 +386,7 @@ class StreamingLinearDiscriminantAnalysis():
 
     def learn_step(self, x, y):
         # make sure things are the right shape
+        x = torch.from_numpy(x)
         if x.ndim == 1:
             x = x.unsqueeze(0)
 
@@ -349,17 +405,22 @@ class StreamingLinearDiscriminantAnalysis():
 
 
     def predict_step(self, x, y=None):
+        x = torch.from_numpy(x)
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+
         with torch.no_grad():
             # initialize parameters for testing
             num_samples = x.shape[0]
             scores = torch.empty((num_samples, self.num_classes))
+            mb = num_samples
 
             # compute/load Lambda matrix
             if self.prev_num_updates != self.num_updates:
                 # there have been updates to the model, compute Lambda
-                print('\nFirst predict since model update...computing Lambda matrix...')
+                # print('\nFirst predict since model update...computing Lambda matrix...')
                 Lambda = torch.pinverse(
-                    (1 - self.shrinkage_param) * self.Sigma + self.shrinkage_param * torch.eye(self.input_shape)).to(self.Lambda.device) 
+                    (1 - self.shrinkage_param) * self.Sigma + self.shrinkage_param * torch.eye(self.feature_dim)).to(self.Lambda.device) 
                 self.Lambda = Lambda
                 self.prev_num_updates = self.num_updates
             else:
@@ -371,23 +432,27 @@ class StreamingLinearDiscriminantAnalysis():
             c = 0.5 * torch.sum(M * W, dim=0)
 
             # loop in mini-batches over test samples
-            scores = torch.matmul(x, W) - c
-
+            for i in range(0, num_samples, mb):
+                start = min(i, num_samples - mb)
+                end = i + mb
+                X = x[start:end]
+                scores[start:end, :] = torch.matmul(X, W) - c
+            
             # return predictions or probabilities
             return torch.argmax(scores, dim=1)
 
 
-    def fit_base(self, X, y):
+    def fit_base(self, x, y):
         print('\nFitting Base...')
-
+        x = torch.from_numpy(x)
         # update class means
         for k in torch.unique(y):
-            self.muK[k] = X[y == k].mean(0)
-            self.cK[k] = X[y == k].shape[0]
-        self.num_updates = X.shape[0]
+            self.muK[k] = x[y == k].mean(0)
+            self.cK[k] = x[y == k].shape[0]
+        self.num_updates = x.shape[0]
 
         print('\nEstimating initial covariance matrix...')
         from sklearn.covariance import OAS
         cov_estimator = OAS(assume_centered=True)
-        cov_estimator.fit((X - self.muK[y]).cpu().numpy())
+        cov_estimator.fit((x - self.muK[y]).cpu().numpy())
         self.Sigma = torch.from_numpy(cov_estimator.covariance_).float().to(self.Sigma.device) 

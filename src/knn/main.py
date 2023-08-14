@@ -24,7 +24,7 @@ def load_dataset(model, dataset):
 
     # Normalize labels
     le = LabelEncoder()
-    le.fit(np.concatenate((train_y), pretrain_y))
+    le.fit(np.concatenate((train_y, pretrain_y))
     train_y = le.transform(train_y)
     test_y = le.transform(test_y)
     pretrain_y = le.transform(pretrain_y)

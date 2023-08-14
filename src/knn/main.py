@@ -24,12 +24,12 @@ def load_dataset(model, dataset):
 
     # Normalize labels
     le = LabelEncoder()
-    le.fit(np.concatenate((train_y, pretrain_y)))
+    le.fit(np.concatenate((train_y), pretrain_y))
     train_y = le.transform(train_y)
     test_y = le.transform(test_y)
     pretrain_y = le.transform(pretrain_y)
 
-    return pretrain_X, pretrain_y, train_X, train_y, test_X, test_y, le.classes_.shape[0]
+    return train_X, train_y, test_X, test_y, le.classes_.shape[0]
 
 
 if __name__ == '__main__':
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     np.random.seed(opt.seed)
     print('==> Params for this experiment:'+str(opt))
 
-    pretrain_X, pretrain_y, train_X, train_y, test_X, test_y, num_classes = load_dataset(opt.model, dataset=opt.dataset)
+    train_X, train_y, test_X, test_y, num_classes = load_dataset(opt.model, dataset=opt.dataset)
     opt.feature_dim, opt.num_classes = train_X.shape[1], num_classes
 
     normalizer = online_clfs.Normalizer(dim=opt.feature_dim)

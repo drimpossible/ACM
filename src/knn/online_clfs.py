@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-import hnswlib, threading, pickle, math, torch, scipy, sklearn
+import hnswlib, threading, pickle, math, torch, scipy
+from sklearn.linear_model import SGDClassifier
 from vowpalwabbit import Workspace
 from vowpalwabbit.dftovw import DFtoVW, SimpleLabel, Feature
 
@@ -47,7 +48,7 @@ class OnlineLogisticClassification_VowpalWabbit():
     def __init__(self, opt):
         self.model = Workspace(oaa=opt.num_classes, loss_function='logistic', b=30, l=opt.lr)
         self.cols = ['label']
-        for i in range(opt.feat_size): self.cols.append('f_'+str(i))
+        for i in range(opt.feature_dim): self.cols.append('f_'+str(i))
 
     def learn_step(self, x, y):
         if x.ndim == 1:
@@ -58,7 +59,7 @@ class OnlineLogisticClassification_VowpalWabbit():
         example = feat.convert_df()[0]
         self.model.learn(example)
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         if x.ndim == 1:
             x = x[np.newaxis, :]
         df = pd.DataFrame(x, columns=self.cols[1:])
@@ -72,7 +73,7 @@ class OnlineSVM_VowpalWabbit():
     def __init__(self, opt):
         self.model = Workspace(oaa=opt.num_classes, loss_function='hinge', b=30, l=opt.lr, l2=opt.wd)
         self.cols = ['label']
-        for i in range(opt.feat_size): self.cols.append('f_'+str(i))
+        for i in range(opt.feature_dim): self.cols.append('f_'+str(i))
 
     def learn_step(self, x, y):
         if x.ndim == 1:
@@ -83,7 +84,7 @@ class OnlineSVM_VowpalWabbit():
         example = feat.convert_df()[0]
         self.model.learn(example)
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         if x.ndim == 1:
             x = x[np.newaxis, :]
         df = pd.DataFrame(x, columns=self.cols[1:])
@@ -95,14 +96,14 @@ class OnlineSVM_VowpalWabbit():
 
 class OnlineSVM_Scikit():
     def __init__(self, opt):
-        self.clf = sklearn.linear_model.SGDClassifier(loss='hinge', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
+        self.clf = SGDClassifier(loss='hinge', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
     
     def learn_step(self, x, y):
         if x.ndim == 1:
             x = x[np.newaxis, :]
         self.clf.partial_fit(x, y, classes=np.arange(self.num_classes))
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         if x.ndim == 1:
             x = x[np.newaxis, :]
         return self.clf.predict(x)
@@ -110,7 +111,7 @@ class OnlineSVM_Scikit():
 
 class OnlineLogisticClassification_Scikit():
     def __init__(self, opt):
-        self.clf = sklearn.linear_model.SGDClassifier(loss='log_loss', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
+        self.clf = SGDClassifier(loss='log_loss', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
         self.num_classes = opt.num_classes
 
     def learn_step(self, x, y):
@@ -118,7 +119,7 @@ class OnlineLogisticClassification_Scikit():
             x = x[np.newaxis, :]
         self.clf.partial_fit(x, y, classes=np.arange(self.num_classes))
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         if x.ndim == 1:
             x = x[np.newaxis, :]
         return self.clf.predict(x)
@@ -126,7 +127,7 @@ class OnlineLogisticClassification_Scikit():
 
 class HuberLossClassifier_Scikit():
     def __init__(self, opt):
-        self.clf = sklearn.linear_model.SGDClassifier(loss='modified_huber', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
+        self.clf = SGDClassifier(loss='modified_huber', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
         self.num_classes = opt.num_classes
 
     def learn_step(self, x, y):
@@ -134,7 +135,7 @@ class HuberLossClassifier_Scikit():
             x = x[np.newaxis, :]
         self.clf.partial_fit(x, y, classes=np.arange(self.num_classes))
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         if x.ndim == 1:
             x = x[np.newaxis, :]
         return self.clf.predict(x)
@@ -145,7 +146,7 @@ class ContextualMemoryTree():
         num_nodes = opt.num_classes/(np.log(opt.num_classes)/np.log(2)*10) 
         self.model = Workspace("--memory_tree "+str(num_nodes)+" --max_number_of_labels "+str(opt.num_classes)+' --online --dream_at_update 1 --leaf_example_multiplier 10  --dream_repeats 12 --learn_at_leaf --alpha 0.1 -l '+str(opt.lr)+' -b 30 -c --loss_function squared --sort_features')
         self.cols = ['label']
-        for i in range(opt.feat_size): self.cols.append('f_'+str(i))
+        for i in range(opt.feature_dim): self.cols.append('f_'+str(i))
 
     def learn_step(self, x, y):
         if x.ndim == 1:
@@ -156,7 +157,7 @@ class ContextualMemoryTree():
         example = feat.convert_df()[0]
         self.model.learn(example)
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         if x.ndim == 1:
             x = x[np.newaxis, :]
         df = pd.DataFrame(x, columns=self.cols[1:])
@@ -193,7 +194,7 @@ class KNearestNeighbours():
             self.train_x = x
 
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         with torch.no_grad():
             if x.ndim == 1:
                 x = x.unsqueeze(0)
@@ -213,7 +214,7 @@ class ApproxKNearestNeighbours():
         self.dset_size = 65536
         self.idx2label = np.zeros(self.dset_size, dtype=np.int16)
         self.index.init_index(max_elements=self.dset_size, ef_construction=opt.HNSW_ef, M=opt.HNSW_M)
-        self.num_neighbours = 1 
+        self.num_neighbours = opt.num_neighbours
 
 
     def learn_step(self, x, y):
@@ -257,13 +258,13 @@ class ApproxKNearestNeighbours():
     def set_num_threads(self, num_threads):
         self.index.set_num_threads(num_threads)
 
-    def predict_step(self, x, y):
+    def predict_step(self, x):
         # Note: y is used only for selecting k for the next step
         # Ideally this should be done in learn_step but to avoid computing neighbours twice, we do it here.
         if x.ndim == 1:
             x = x[np.newaxis, :]
 
-        idxes, _ = self.index.knn_query(data=x, k=1)
+        idxes, _ = self.index.knn_query(data=x, k=self.num_neighbours)
         neighbour_labels = self.idx2label[idxes]
         pred_labels, _ = scipy.stats.mode(neighbour_labels, axis=1)
         return pred_labels
@@ -303,7 +304,7 @@ class NearestClassMeanCosine():
                     self.num_samples[y[index]] += 1
     
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         x = torch.from_numpy(x)
         if x.ndim == 1:
             x = x.unsqueeze(0)
@@ -348,7 +349,7 @@ class NearestClassMeanL2():
                     self.num_samples[y[index]] += 1
     
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         x = torch.from_numpy(x)
         if x.ndim == 1:
             x = x.unsqueeze(0)
@@ -404,7 +405,7 @@ class StreamingLinearDiscriminantAnalysis():
             self.num_updates += 1
 
 
-    def predict_step(self, x, y=None):
+    def predict_step(self, x):
         x = torch.from_numpy(x)
         if x.ndim == 1:
             x = x.unsqueeze(0)

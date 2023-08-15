@@ -272,7 +272,9 @@ class ApproxKNearestNeighbours():
             x = x[np.newaxis, :]
         
         idxes, _ = self.index.knn_query(data=x, k=self.num_neighbours)
+        
         neighbour_labels = self.idx2label[idxes]
+        
         pred_labels, _ = scipy.stats.mode(neighbour_labels, axis=1)
         return pred_labels
     
@@ -290,7 +292,7 @@ class ApproxKNearestNeighbours():
         return out_pred
     
     def deploy_num_neighbours(self):
-        best_acc, best_k = 0, 0
+        best_acc, best_k = -1, 0
         labels = np.array(self.labels)
 
         for j in range(5): 

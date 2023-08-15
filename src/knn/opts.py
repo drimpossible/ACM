@@ -23,6 +23,7 @@ def parse_args():
    parser.add_argument('--num_neighbours', type=int, default=2, help='k for kNN')
    parser.add_argument('--update_k', type=int, default=1, help='Update k for kNN after these many samples')
    parser.add_argument('--update_size', type=int, default=1, help='Consider these many samples for accuracy calculation for k update')
+   parser.add_argument('--delay', type=int, default=1, help='Delay for ACM')
    opt = parser.parse_args()
    return opt
     

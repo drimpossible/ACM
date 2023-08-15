@@ -6,9 +6,9 @@ from sklearn.preprocessing import LabelEncoder
 
 def load_dataset(model, dataset):
     #pretrain_X = np.load(os.path.join(opt.feature_path, f"xcit_dino_{dataset}_pretrain_features.npy"))
-    #pretrain_y = np.load(os.path.join(opt.feature_path, f"xcit_dino_{dataset}_pretrain_labels.npy"))
+    pretrain_y = np.load(os.path.join(opt.feature_path, f"xcit_dino_{dataset}_pretrain_labels.npy"))
     pretrain_X = None
-    pretrain_y = None
+    #pretrain_y = None
     train_X = np.load(os.path.join(opt.feature_path, f"{model}_{dataset}_train_features.npy"))
     train_y = np.load(os.path.join(opt.feature_path, f"{model}_{dataset}_train_labels.npy"))
     test_X = np.load(os.path.join(opt.feature_path, f"{model}_{dataset}_test_features.npy"))
@@ -26,8 +26,8 @@ def load_dataset(model, dataset):
 
     # Normalize labels
     le = LabelEncoder()
-    #le.fit(np.concatenate((train_y, pretrain_y)))
-    le.fit(train_y)
+    le.fit(np.concatenate((train_y, pretrain_y)))
+    #le.fit(train_y)
     train_y = le.transform(train_y)
     test_y = le.transform(test_y)
     #pretrain_y = le.transform(pretrain_y)
@@ -52,29 +52,35 @@ if __name__ == '__main__':
     predarr, labelarr, acc = np.zeros(train_y.shape[0], dtype='u2'), np.zeros(train_y.shape[0], dtype='u2'), np.zeros(train_y.shape[0], dtype='bool')
     start_time = time.time()
     
-    for i in range(train_X.shape[0]):
-        feat = train_X[i]
-        if opt.normalize_input: 
-            feat = normalizer.update_and_transform(feat)
+    for i in range(train_X.shape[0]- opt.delay):
+        feat_learn = train_X[i]
+        feat_pred = train_X[i+opt.delay]
 
-        if i >= 256: # Slightly shifted ahead start point to warmup all classifiers, avoids weird jagged artifacts in plots
-            if opt.online_classifier == 'ApproxKNearestNeighbours' and (i+1)%opt.update_k <= (opt.update_size-1):
-                pred = online_clf.full_predict_step(x=feat, y=train_y[i])
-                if (i+1)%opt.update_k == (opt.update_size-1):
+        if opt.normalize_input: 
+            feat_learn = normalizer.update_and_transform(feat_learn)
+            feat_pred = normalizer.transform(feat_pred)
+
+        if i >= 256+opt.delay: # Slightly shifted ahead start point to warmup all classifiers, avoids weird jagged artifacts in plots
+            if opt.online_classifier == 'ApproxKNearestNeighbours':
+                if (i+1)%opt.update_k <= (opt.update_size-1):
+                    pred = online_clf.full_predict_step(x=feat_pred, y=train_y[i+opt.delay])
+                else:
+                    pred = online_clf.predict_step(x=feat_pred)     
+                if i>opt.update_k and (i+1)%opt.update_k == (opt.update_size-1+opt.delay):
                     online_clf.deploy_num_neighbours()
             else:
-                pred = online_clf.predict_step(x=feat)
+                pred = online_clf.predict_step(x=feat_pred)
                 
-            predarr[i] = int(pred)
-            labelarr[i] = int(train_y[i])
-            is_correct = (int(pred)==int(train_y[i]))
-            acc[i] = is_correct*1.0
+            predarr[i+opt.delay] = int(pred)
+            labelarr[i+opt.delay] = int(train_y[i+opt.delay])
+            is_correct = (int(pred)==int(train_y[i+opt.delay]))
+            acc[i+opt.delay] = is_correct*1.0
             
         if (i+1)%opt.print_freq == 0:
             cum_acc = np.array(acc[:i]).mean()
             print(f'Step:\t{i}\tCumul Acc:{cum_acc}')
 
-        online_clf.learn_step(x=feat, y=np.array([train_y[i]]))
+        online_clf.learn_step(x=feat_learn, y=np.array([train_y[i]]))
 
     total_time = time.time() - start_time
     print(f'Total time taken: {total_time:.4f}')

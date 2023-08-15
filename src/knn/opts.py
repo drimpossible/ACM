@@ -19,8 +19,10 @@ def parse_args():
    parser.add_argument('--gpu', action="store_true", help='Peform online learning on GPU')
    parser.add_argument('--online_exp_name', type=str, default='test', help='Full path to the order file')
    parser.add_argument('--seed', type=int, default=0, help='Seed for reproducibility')
-   parser.add_argument('--print_freq', type=int, default=2500, help='Printing utils')
-   parser.add_argument('--num_neighbours', type=int, default=1, help='k for kNN')
+   parser.add_argument('--print_freq', type=int, default=5000, help='Printing utils')
+   parser.add_argument('--num_neighbours', type=int, default=2, help='k for kNN')
+   parser.add_argument('--update_k', type=int, default=1, help='Update k for kNN after these many samples')
+   parser.add_argument('--update_size', type=int, default=1, help='Consider these many samples for accuracy calculation for k update')
    opt = parser.parse_args()
    return opt
     

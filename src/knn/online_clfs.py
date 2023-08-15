@@ -1,10 +1,8 @@
 import numpy as np
 import pandas as pd
-import hnswlib, threading, pickle, math, torch, scipy
+import threading, pickle, math, torch, scipy
 from sklearn.linear_model import SGDClassifier
-from vowpalwabbit import Workspace
-from vowpalwabbit.dftovw import DFtoVW, SimpleLabel, Feature
-
+from sklearn.metrics.pairwise import cosine_similarity
 
 class Normalizer():
     def __init__(self, size=None, dim=None, mean=None, unnormalized_var=None):
@@ -46,6 +44,8 @@ class Normalizer():
 
 class OnlineLogisticClassification_VowpalWabbit():
     def __init__(self, opt):
+        from vowpalwabbit import Workspace
+        from vowpalwabbit.dftovw import DFtoVW, SimpleLabel, Feature
         self.model = Workspace(oaa=opt.num_classes, loss_function='logistic', b=30, l=opt.lr)
         self.cols = ['label']
         for i in range(opt.feature_dim): self.cols.append('f_'+str(i))
@@ -71,6 +71,8 @@ class OnlineLogisticClassification_VowpalWabbit():
 
 class OnlineSVM_VowpalWabbit():
     def __init__(self, opt):
+        from vowpalwabbit import Workspace
+        from vowpalwabbit.dftovw import DFtoVW, SimpleLabel, Feature
         self.model = Workspace(oaa=opt.num_classes, loss_function='hinge', b=30, l=opt.lr, l2=opt.wd)
         self.cols = ['label']
         for i in range(opt.feature_dim): self.cols.append('f_'+str(i))
@@ -96,6 +98,7 @@ class OnlineSVM_VowpalWabbit():
 
 class OnlineSVM_Scikit():
     def __init__(self, opt):
+        
         self.clf = SGDClassifier(loss='hinge', penalty='l2', alpha=opt.wd, fit_intercept=True, learning_rate='optimal', warm_start=True)
     
     def learn_step(self, x, y):
@@ -143,6 +146,8 @@ class HuberLossClassifier_Scikit():
 
 class ContextualMemoryTree():
     def __init__(self, opt):
+        from vowpalwabbit import Workspace
+        from vowpalwabbit.dftovw import DFtoVW, SimpleLabel, Feature
         num_nodes = opt.num_classes/(np.log(opt.num_classes)/np.log(2)*10) 
         self.model = Workspace("--memory_tree "+str(num_nodes)+" --max_number_of_labels "+str(opt.num_classes)+' --online --dream_at_update 1 --leaf_example_multiplier 10  --dream_repeats 12 --learn_at_leaf --alpha 0.1 -l '+str(opt.lr)+' -b 30 -c --loss_function squared --sort_features')
         self.cols = ['label']
@@ -208,6 +213,7 @@ class KNearestNeighbours():
 class ApproxKNearestNeighbours():
     # https://raw.githubusercontent.com/nmslib/nmslib/master/manual/latex/manual.pdf
     def __init__(self, opt):
+        import hnswlib
         self.index = hnswlib.Index(space=opt.search_metric, dim=opt.feature_dim)
         self.lock = threading.Lock()
         self.cur_idx = 0
@@ -215,7 +221,8 @@ class ApproxKNearestNeighbours():
         self.idx2label = np.zeros(self.dset_size, dtype=np.int16)
         self.index.init_index(max_elements=self.dset_size, ef_construction=opt.HNSW_ef, M=opt.HNSW_M)
         self.num_neighbours = opt.num_neighbours
-
+        self.preds = [[], [], [], [], []]
+        self.labels = []
 
     def learn_step(self, x, y):
         if x.ndim == 1:
@@ -263,32 +270,53 @@ class ApproxKNearestNeighbours():
         # Ideally this should be done in learn_step but to avoid computing neighbours twice, we do it here.
         if x.ndim == 1:
             x = x[np.newaxis, :]
-
+        
         idxes, _ = self.index.knn_query(data=x, k=self.num_neighbours)
         neighbour_labels = self.idx2label[idxes]
         pred_labels, _ = scipy.stats.mode(neighbour_labels, axis=1)
         return pred_labels
+    
+    def full_predict_step(self, x, y):
+        idxes, _ = self.index.knn_query(data=x, k=16)
+        neighbour_labels = self.idx2label[idxes]
+        
+        for j in range(5): 
+            pred_labels, _ = scipy.stats.mode(neighbour_labels[:,:2**j], axis=1)
+            self.preds[j].append(int(pred_labels))
+            if 2**j == self.num_neighbours:
+                out_pred = pred_labels
+        self.labels.append(y)
+
+        return out_pred
+    
+    def deploy_num_neighbours(self):
+        best_acc, best_k = 0, 0
+        labels = np.array(self.labels)
+
+        for j in range(5): 
+            preds = np.array(self.preds[j])
+            acc = ((preds == labels)*1.0).mean()
+            if acc > best_acc:
+                best_acc = acc
+                best_k = 2**j
+        
+        self.num_neighbours = best_k
+        print(self.num_neighbours)
+        self.preds = [[], [], [], [], []]
+        self.labels = []
 
 
 class NearestClassMeanCosine():
     def __init__(self, opt):
         with torch.no_grad():
             # Class means is class sums, divided by number of samples
-            self.class_sums = torch.zeros((1, opt.feature_dim, opt.num_classes))
-            self.num_samples = torch.zeros((1,1,opt.num_classes))
-            self.dist = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
-            
-            if opt.gpu:
-                self.class_sums = self.class_sums.cuda()
-                self.num_samples = self.num_samples.cuda()
-                self.dist = self.dist.cuda()
+            self.class_sums = np.zeros((opt.num_classes, opt.feature_dim))
+            self.num_samples = np.zeros((opt.num_classes,1))
             
 
     def learn_step(self, x, y):
-        x = torch.from_numpy(x)
         if x.ndim == 1:
-            x = x.unsqueeze(0)
-        x = x.unsqueeze(2)
+            x = x[np.newaxis, :]
 
         with torch.no_grad():
             # Update class mean and number of samples
@@ -296,25 +324,21 @@ class NearestClassMeanCosine():
                 for index in range(self.num_samples.shape[0]):
                     if (y==index).sum() == 0:
                         continue
-                    self.class_sums[:,:,index] += x[y==index].sum(dim=0).squeeze()
+                    self.class_sums[index,:] += x[y==index].sum(axis=0)
                     self.num_samples[index] += (y==index).sum()
             else:
                 for index in range(y.shape[0]):
-                    self.class_sums[0,:,y[index]] += x[index].squeeze()
+                    self.class_sums[y[index],:] += x[index].squeeze()
                     self.num_samples[y[index]] += 1
     
 
     def predict_step(self, x):
-        x = torch.from_numpy(x)
         if x.ndim == 1:
-            x = x.unsqueeze(0)
-        x = x.unsqueeze(2)
+            x = x[np.newaxis, :]
 
-        with torch.no_grad():
-            class_means = self.class_sums / (self.num_samples+1e-6)
-            distances = self.dist(x, class_means)
-            distances = torch.where(distances!=0, distances, 1e5)
-            return torch.argmin(distances, dim=1)
+        class_means = self.class_sums / (self.num_samples+1e-6)
+        distances = cosine_similarity(x, class_means)
+        return np.argmax(distances, axis=1)
         
 
 class NearestClassMeanL2():
